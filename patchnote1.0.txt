@@ -1,0 +1,50 @@
+PatchnoteJasminMich
+
+Done today
+
+- Fixed hitbox bombs
+
+- Score increase on bomb defusing added
+
+- Bonus decreasing overtime added
+
+- When Lives = 0 games stops (objEtat.on = false)
+
+- When bomb all defuse games stops and nextRound is called
+
+- When win resets everything keeps score and lifes and puts speed ++
+
+- Added animation when fallen on the ground('DEAD') <== name of it
+
+- Added sound coin when defusing bomb
+
+- Added Sad violin sound on defeat
+
+- Fixed jumping sound not working all the time
+
+-Presentation du html centrer notre jumpman etc titre etc css etc
+
+-Death screen rest inpeace gg with sad violin
+
+
+*****************************************************************************
+
+What is left to do gl hf
+
+-Add ropes
+
+-Polish movement (running when falling without jumping)
+
+-Fall bouncing around 
+
+-Victory sound
+
+-Swag is almost done
+
+-Fix ladder glitch on two tops side won't go trough (sometimes needed to go down before going up )
+
+-Make ladder disappear
+
+-Do special case on bottom platform and fall damage.
+
+-Make jumpman jump from ladders

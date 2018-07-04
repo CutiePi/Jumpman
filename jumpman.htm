@@ -1,0 +1,1574 @@
+﻿<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="fr" xml:lang="fr">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Jumpman par Jasmin Lapointe et Michel Bussiere</title>
+  <link rel="stylesheet" type="text/css" href="jumpman.css" />
+  <!-- Code JavaScript local -->
+  <script type="text/javascript">
+
+    // Canvas et contexte
+    var objCanvas = null;
+    var objC2D = null;
+
+    // Animation
+    var objCycleAnimation = null;
+
+    // Composantes du jeu
+    var objArrierePlan = null;
+    var objBombes = null;
+    var objCordes = null;
+    var objJumpman = null;
+    var objEchelles = null;
+    var objPlateformes = null;
+    var objPointage = null;
+    var objBalle = null;
+    var objEtat = null;
+    var objSons = null;
+
+
+    //variable utile
+    var fltMoveBalle = null;
+    var timeSpent = 0;
+    var scoreTemp = 0;
+    var viesTemp = 0;
+    var speedTemp = 0;
+    var first = true;
+
+    // Dimensions du Canvas
+    var largeurCanvas = null;
+    var hauteurCanvas = null;
+    var demilargeurCanvas = null;
+    var demiHauteurCanvas = null;
+    var quartLargeurCanvas = null;
+    var quartHauteurCanvas = null;
+
+    // Dimensions du Jeu
+    var largeurJeu = null;
+    var hauteurJeu = null;
+    var demiLargeurJeu = null;
+    var demiHauteurJeu = null;
+    var quartLargeurJeu = null;
+    var quartHauteurJeu = null;
+
+    // Un cycle d'animation
+    function animer() {
+      // Requête pour le prochain cycle
+      objCycleAnimation = requestAnimationFrame(animer);
+
+      // Le cycle d'animation
+      effacerDessin();
+      majAnimation();
+      dessiner();
+    }
+
+    // Arrêter l'animation
+    function arreterAnimation() {
+      if (objCycleAnimation != null) cancelAnimationFrame(objCycleAnimation);
+      objCycleAnimation = null;
+    }
+
+    function dessiner() {
+        dessinerArrierePlan();
+        dessinerBombes();
+        dessinerCordes();
+        dessinerEchelles();
+        dessinerJumpman();
+        dessinerPlateformes();
+        dessinerPointage();
+        dessinerBalle();
+    }
+
+    function effacerDessin() {
+      objC2D.clearRect(0,0, objCanvas.width, objCanvas.height);
+    }
+
+    function initJeu() {
+      objCanvas = document.getElementById('monCanvas');
+      objC2D = objCanvas.getContext('2d');
+
+      // Dimensions du Canvas
+      largeurCanvas       = objCanvas.width;
+      hauteurCanvas       = objCanvas.height;
+      demiLargeurCanvas   = objCanvas.width / 2;
+      demiHauteurCanvas   = objCanvas.height / 2;
+      quartLargeurCanvas  = Math.floor(objCanvas.width / 4);
+      quartHauteurCanvas  = Math.floor(objCanvas.height / 4);
+
+      // Dimensions du Jeu
+      largeurJeu          = objCanvas.width;
+      hauteurJeu          = objCanvas.height - quartHauteurCanvas / 3;
+      demiLargeurJeu      = objCanvas.width / 2;
+      demiHauteurJeu      = objCanvas.height / 2 - quartHauteurCanvas / 3;
+      quartLargeurJeu     = Math.floor(objCanvas.width / 4);
+      quartHauteurJeu     = Math.floor(objCanvas.height / 4) - quartHauteurCanvas / 3;
+
+      // ***IMPORTANT***
+        // Le contexte est placé au centre du plafond du canvas
+      if(first){
+      objC2D.translate(largeurJeu / 2, 0);
+      first=false;
+    }
+
+      initArrierePlan();
+      initCordes();
+      initEchelles();
+      initJumpman();
+      initPlateformes();
+      initBombes();
+      initBalle();
+      initEtat();
+      initSons();
+
+      dessiner();
+      animer();
+    }
+
+    function majAnimation() {
+      majAnimationBombes();
+      majAnimationJumpman();
+      majBalle();
+      killJumpman();
+      majBonus();
+    }
+
+    /*** Composantes du jeu ***/
+
+    // ArrierePlan
+    function initArrierePlan() {
+      /*objArrierePlan = new Image();
+
+      objArrierePlan.src = 'Background.png';*/
+
+      objArrierePlan = new Object();
+
+      objArrierePlan.Couleur = 'black';
+    }
+
+    function dessinerArrierePlan() {
+      objC2D.save();
+
+      //objC2D.drawImage(objArrierePlan, -1 * demiLargeurJeu, 0, largeurJeu, hauteurJeu);
+
+      objC2D.fillStyle = objArrierePlan.Couleur;
+
+      objC2D.fillRect(-1 * demiLargeurJeu, 0, largeurJeu, hauteurJeu);
+
+      objC2D.restore();
+    }
+
+    //balle
+    function initBalle(){
+//creer la balle et initialise ses variables et fltMovementBalle qui est utiliser pour la direction et verification de lalignement
+      fltMoveBalle = 0.5;
+      objBalle = new Object();
+      objBalle.directionX = 0;
+      objBalle.directionY = 0;
+      objBalle.kill = false;
+      if(Math.floor(Math.random()*10  + 1)>5){
+        objBalle.PositionX = Math.round(Math.random())*largeurJeu == 0 ? -demiLargeurJeu :demiLargeurJeu - 15;
+        objBalle.PositionY = Math.floor(hauteurJeu/(Math.random()*6 + 1));
+        objBalle.moveX = false;
+        if(objBalle.PositionX == -demiLargeurJeu)
+          objBalle.directionX = fltMoveBalle;
+        else{
+          objBalle.directionX = -fltMoveBalle;
+        fltMoveBalle*=-1;
+      }
+      }
+      else{
+        objBalle.moveX = true;
+        objBalle.PositionY = Math.round(Math.random())*hauteurJeu == 0 ? 0 :hauteurJeu;
+        objBalle.PositionX = Math.floor(demiLargeurJeu/(Math.random()*10 + 1));
+        objBalle.PositionX *= Math.floor(Math.random()*10  + 1)>5 ? -1 : 1;
+        if(objBalle.PositionY == 0)
+        objBalle.directionY = fltMoveBalle;
+      else{
+        objBalle.directionY = -fltMoveBalle;
+      fltMoveBalle*=-1;
+    }
+      }
+
+    }
+
+    function nextRound(){
+      arreterAnimation();
+      initJeu();
+      objEtat.intScore = scoreTemp;
+      objEtat.intVies = viesTemp;
+      objEtat.intVitesse = speedTemp;
+      majVitesse();
+    }
+
+    function majBalle(){
+      //mouvement de la balle
+      //et verification alignement avec jumpman
+      if(objEtat.on){
+      if(!objBalle.moveX){
+        objBalle.PositionX+=objBalle.directionX;
+        if(objBalle.PositionY >= objJumpman.PositionY - objJumpman.hauteurJeu && objBalle.PositionY <= objJumpman.PositionY  && !objBalle.kill){
+          objBalle.directionX *=8;
+          objBalle.kill = true;
+          objSons.balle.play();
+        }
+        else if(objBalle.PositionX >= objJumpman.PositionX - objJumpman.largeurJeu/2 && objBalle.PositionX <= objJumpman.PositionX + objJumpman.largeurJeu/2 && !objBalle.kill){
+          objBalle.directionY = objBalle.PositionY <= objJumpman.PositionY? 4 : -4;
+          objBalle.directionX = 0;
+          objBalle.kill = true;
+          objBalle.moveX =true;
+         objSons.balle.play();
+        }
+      }
+      else{
+        objBalle.PositionY+=objBalle.directionY;
+        if(objBalle.PositionX >= objJumpman.PositionX - objJumpman.largeurJeu/2 && objBalle.PositionX <= objJumpman.PositionX + objJumpman.largeurJeu/2 && !objBalle.kill){
+          objBalle.directionY *=8;
+          objBalle.kill = true;
+          objSons.balle.play();
+        }
+        else if(objBalle.PositionY >= objJumpman.PositionY - objJumpman.hauteurJeu && objBalle.PositionY <= objJumpman.PositionY  && !objBalle.kill){
+          objBalle.directionX = objBalle.PositionX <= objJumpman.PositionX? 4 : -4;
+          objBalle.directionY = 0;
+          objBalle.kill = true;
+          objBalle.moveX = false;
+          objSons.balle.play();
+        }
+      }
+
+      if(objBalle.PositionY > hauteurJeu || objBalle.PositionY < 0 || objBalle.PositionX > demiLargeurJeu || objBalle.PositionX < -demiLargeurJeu)
+        initBalle();
+    }
+    }
+
+    function dessinerBalle(){
+      objC2D.save();
+      objC2D.fillStyle = 'white';
+      objC2D.fillRect(objBalle.PositionX, objBalle.PositionY, 8, 8);
+      objC2D.restore();
+    }
+
+    // Construire les sons
+    function initSons() {
+        objSons = new Object();
+
+        var objSon = document.createElement('audio');
+        objSon.setAttribute('src', 'sons/hitmark.mp3');
+        objSon.load();
+        objSons.marcher = objSon;
+
+       var objSon = document.createElement('audio');
+        objSon.setAttribute('src', 'sons/whengetbomb2.mp3');
+        objSon.load();
+        objSons.Bomb = objSon;
+
+        var objSon = document.createElement('audio');
+        objSon.setAttribute('src', 'sons/getnoscoped.mp3');
+        objSon.load();
+        objSons.kill = objSon;
+
+        var objSon = document.createElement('audio');
+        objSon.setAttribute('src', 'sons/forwin.mp3');
+        objSon.load();
+        objSons.win = objSon;
+
+        var objSon = document.createElement('audio');
+        objSon.setAttribute('src', 'sons/shotgun.mp3');
+        objSon.load();
+        objSons.balle = objSon;
+
+        var objSon = document.createElement('audio');
+        objSon.setAttribute('src', 'sons/jump.mp3');
+        objSon.load();
+        objSons.jump = objSon;
+
+        var objSon = document.createElement('audio');
+        objSon.setAttribute('src', 'sons/sadviolin.mp3');
+        objSon.load();
+        objSons.lose = objSon;
+    }
+
+    // Bombes
+    function initBombes() {
+      objBombes = new Object();
+
+      objBombes.Coordonnees = [[  07/64 * demiLargeurJeu, 04/64 * hauteurJeu ],
+                               [ -07/64 * demiLargeurJeu, 04/64 * hauteurJeu ],
+                               [  61/64 * demiLargeurJeu, 06/64 * hauteurJeu ],
+                               [ -61/64 * demiLargeurJeu, 06/64 * hauteurJeu ],
+                               [  61/64 * demiLargeurJeu, 14/64 * hauteurJeu ],
+                               [ -61/64 * demiLargeurJeu, 14/64 * hauteurJeu ],
+                               [  35/64 * demiLargeurJeu, 28/64 * hauteurJeu ],
+                               [ -35/64 * demiLargeurJeu, 28/64 * hauteurJeu ],
+                               [  07/64 * demiLargeurJeu, 54/64 * hauteurJeu ],
+                               [ -07/64 * demiLargeurJeu, 54/64 * hauteurJeu ],
+                               [  61/64 * demiLargeurJeu, 62/64 * hauteurJeu ],
+                               [ -61/64 * demiLargeurJeu, 62/64 * hauteurJeu ]];
+
+      objBombes.BombesDesamorcees = new Array();
+
+      for (var i = 0; i < 12; i++) {
+        objBombes.BombesDesamorcees.push(false);
+      }
+    }
+
+    function majAnimationBombes() {
+
+    }
+
+    function dessinerBombes() {
+      objC2D.save();
+
+      objC2D.fillStyle = 'orange';
+      for (var i = 0; i < objBombes.Coordonnees.length; i++) {
+        if (!objBombes.BombesDesamorcees[i]) {
+          objC2D.fillRect((objBombes.Coordonnees[i][0] - 1/64 * demiLargeurJeu)+6, objBombes.Coordonnees[i][1] - 2/64 * hauteurJeu, (2/64 * demiLargeurJeu)/1.5, (2/64 * hauteurJeu)/4);
+          objC2D.fillRect((objBombes.Coordonnees[i][0] - 1/64 * demiLargeurJeu)+6, (objBombes.Coordonnees[i][1] - 2/64 * hauteurJeu)+12, (2/64 * demiLargeurJeu)/1.5, (2/64 * hauteurJeu)/4);
+          objC2D.fillRect((objBombes.Coordonnees[i][0] - 1/64 * demiLargeurJeu), (objBombes.Coordonnees[i][1] - 2/64 * hauteurJeu)+5, (2/64 * demiLargeurJeu)/3, (2/64 * hauteurJeu)/3);
+          objC2D.fillRect((objBombes.Coordonnees[i][0] - 1/64 * demiLargeurJeu)+6+((2/64 * demiLargeurJeu)/1.5), (objBombes.Coordonnees[i][1] - 2/64 * hauteurJeu)+5, (2/64 * demiLargeurJeu)/3, (2/64 * hauteurJeu)/3);
+        }
+      }
+
+      objC2D.restore();
+    }
+
+    // Cordes
+    function initCordes() {
+      objCordes = new Object();
+
+      objCordes.Coordonnees = [ 34/64 * demiLargeurJeu, 32/64 * hauteurJeu ];
+    }
+
+    function dessinerCordes() {
+      objC2D.save();
+
+
+
+      objC2D.restore();
+    }
+
+    // Echelles
+    function initEchelles() {
+      objEchelles = new Object();
+
+      // Pair (Gauche) = X, Impair (Droite) = Y
+        // Les coordonnées sont en ratio pour s'ajuster automatiquement
+        // à un changement de taille du canvas
+
+      // Coordonnées du centre de la base de l'échelle
+        // Elles servent à placer l'échelle
+      objEchelles.CoordonneesBase = [[ 27/64 * demiLargeurJeu, 16/64 * hauteurJeu ],
+
+                                     [ 52/64 * demiLargeurJeu, 18/64 * hauteurJeu ],
+
+                                     [ 00/64 * demiLargeurJeu, 32/64 * hauteurJeu ],
+
+                                     [ 52/64 * demiLargeurJeu, 32/64 * hauteurJeu ],
+
+                                     [ 14/64 * demiLargeurJeu, 44/64 * hauteurJeu ],
+
+                                     [ 52/64 * demiLargeurJeu, 62/64 * hauteurJeu ]];
+
+      // Coordonnées des coins de l'échelle
+        // Elles servent à détecter la collision avec Jumpman
+        // Elles sont calculées automatiquement avec les
+        // coordonnées de la base
+
+      objEchelles.CoordonneesCoins = new Array();
+
+      for (var i = 0; i < objEchelles.CoordonneesBase.length; i++) {
+        var coord = objEchelles.CoordonneesBase[i];
+        objEchelles.CoordonneesCoins.push([ coord[0] - 3/64 * demiLargeurJeu, coord[1] - 14/64 * hauteurJeu,
+                                            coord[0] + 3/64 * demiLargeurJeu, coord[1] - 14/64 * hauteurJeu,
+                                            coord[0] - 3/64 * demiLargeurJeu, coord[1],
+                                            coord[0] + 3/64 * demiLargeurJeu, coord[1] ]);
+      }
+    }
+
+    function dessinerEchelles() {
+      objC2D.save();
+
+      objC2D.fillStyle = 'darkblue';
+
+      // Normal
+      for (var i = 0; i < objEchelles.CoordonneesCoins.length; i++) {
+        var coord = objEchelles.CoordonneesCoins[i];
+
+        objC2D.fillRect(coord[0], coord[1], (coord[2] - coord[0])/10, coord[5]-coord[1]);
+        objC2D.fillRect(coord[0]+9*((coord[2] - coord[0])/10), coord[1], (coord[2] - coord[0])/10, coord[5]-coord[1]);
+        for(var j = 0;j<18;j++){
+          if(j%3==0)
+        objC2D.fillRect(coord[0], coord[1]+(j*(coord[5]-coord[1])/18), coord[2] - coord[0], (coord[5]-coord[1])/18);
+      }
+      }
+
+      // Miroir
+      objC2D.scale(-1, 1);
+
+      for (var i = 0; i < objEchelles.CoordonneesCoins.length; i++) {
+        var coord = objEchelles.CoordonneesCoins[i];
+
+        objC2D.fillRect(coord[0], coord[1], (coord[2] - coord[0])/10, coord[5]-coord[1]);
+        objC2D.fillRect(coord[0]+9*((coord[2] - coord[0])/10), coord[1], (coord[2] - coord[0])/10, coord[5]-coord[1]);
+        for(var j = 0;j<18;j++){
+          if(j%3==0)
+        objC2D.fillRect(coord[0], coord[1]+(j*(coord[5]-coord[1])/18), coord[2] - coord[0], (coord[5]-coord[1])/18);
+      }
+      }
+
+      objC2D.restore();
+    }
+
+    // Jumpman
+    function initJumpman() {
+      objJumpman = new Object();
+
+      objJumpman.largeurJeu = 2/64 * largeurJeu;
+      objJumpman.hauteurJeu = 1/20 * hauteurJeu;
+
+      //etat de marche 1 
+      objJumpman.Walking = 0;
+
+      //STATIC LRUN RRUN JUMP LJUMP RJUMP LADDER ROPE
+      objJumpman.Etat = 'STATIC';
+
+      // Sa position est celle au centre de ses pieds
+      objJumpman.PositionX = 0   * demiLargeurJeu;
+      objJumpman.PositionY = 2/3 * hauteurJeu;
+
+      // ***TEST***
+      //objJumpman.PositionX = 1/3  * demiLargeurJeu + 1;
+
+      // Sa position étant positive ou négative
+      objJumpman.PositionPositive = true;
+
+      // Son état de collision avec les plateformes
+      objJumpman.Collision = false;
+
+      // Son état de déplacement horizontal
+      objJumpman.DeplacementDroite = false;
+      objJumpman.DeplacementGauche = false;
+
+      // Son état de déplacement vertical
+      objJumpman.DeplacementHaut = false;
+      objJumpman.DeplacementBas = false;
+
+      // Son état de saut
+      objJumpman.Saut = false;
+        // Nombre de pixels franchis verticalement par le saut
+      objJumpman.SautPixelsFranchisY = 0;
+        // Nombre de pas
+      objJumpman.NbPas = 0;
+        // Nombre de pixels franchis horizontalement par le saut
+      objJumpman.SautPixelsFranchisX = 0;
+      // Son état de descente
+      objJumpman.Descente = false;
+
+      // Dans quelle zone d'échelle Jumpman se trouve
+      objJumpman.ZoneEchelle = -1;
+
+      // Son état avec les échelles
+      objJumpman.Echelle = false;
+    }
+
+    function killJumpman() {
+      if(objBalle.PositionX >= objJumpman.PositionX - objJumpman.largeurJeu/2 && objBalle.PositionX <= objJumpman.PositionX + objJumpman.largeurJeu/2 &&
+        objBalle.PositionY >= objJumpman.PositionY - objJumpman.hauteurJeu  && objBalle.PositionY <= objJumpman.PositionY)
+      {
+        //avant jumpman faire le fall animation et apres init
+        objSons.kill.pause;
+        objSons.kill.currentTime = 0;
+        initJumpman();
+        initBalle(); 
+        majVies();
+        objSons.kill.play();
+      }
+    }
+
+    function majAnimationJumpman() {
+      if(objEtat.on){
+      if (objJumpman.PositionX >= 0) {
+        objJumpman.PositionPositive = true;
+      } else {
+        objJumpman.PositionPositive = false;
+      }
+
+      objJumpman.Collision = false;
+
+      objJumpman.Etat = 'STATIC';
+
+      var PositionX = objJumpman.PositionX >= 0 ? objJumpman.PositionX : -1 * objJumpman.PositionX;
+      var PositionY = objJumpman.PositionY;
+
+      // Collision
+      if (!objJumpman.Echelle) {
+        for (var i = 0; i < objPlateformes.Coordonnees.length; i++) {
+          var coord = objPlateformes.Coordonnees[i];
+          for (var j = 0; j < objPlateformes.Coordonnees[i].length; j += 2) {
+            if (PositionX >= coord[j]     && PositionX <= coord[j + 2] &&
+               (PositionY >= coord[j + 1] || PositionY >= coord[j + 3]) ) {
+              var pointCollisionY = coord[j + 1] + (coord[j + 3] - coord[j + 1]) * ( (PositionX - coord[j]) / (coord[j + 2] - coord[j]) );
+
+              //console.log(j + ' ' + (objBombes.BombesDesamorcees[2] &&  objJumpman.PositionPositive) + (objBombes.BombesDesamorcees[3] && !objJumpman.PositionPositive))
+              if ( !(i == 0 &&
+                    (j == 4 || j == 6) &&
+                    ( (objBombes.BombesDesamorcees[2] &&  objJumpman.PositionPositive) ||
+                      (objBombes.BombesDesamorcees[3] && !objJumpman.PositionPositive) ) ) ) {
+                if (Math.floor(PositionY) - Math.floor(pointCollisionY) < 10 &&
+                    Math.floor(PositionY) - Math.floor(pointCollisionY) > -10 &&
+                    !objJumpman.Saut) {
+                  objJumpman.PositionY = pointCollisionY;
+                }
+
+                if (Math.floor(objJumpman.PositionY) == Math.floor(pointCollisionY) ) {
+                  objJumpman.Collision = true;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Bombes
+      for (var i = 0; i < objBombes.Coordonnees.length; i++) {
+        if (objJumpman.PositionPositive &&          // Vérification à la droite
+            (PositionX + (objJumpman.largeurJeu / 6)) >= objBombes.Coordonnees[i][0] - 1/64 * demiLargeurJeu &&
+            (PositionX - (objJumpman.largeurJeu / 6)) <= objBombes.Coordonnees[i][0] + 1/64 * demiLargeurJeu &&
+            objBombes.Coordonnees[i][1] - 2/64 * hauteurJeu >= PositionY - objJumpman.hauteurJeu  &&
+            objBombes.Coordonnees[i][1] <= PositionY) {
+          if(objBombes.BombesDesamorcees[i]!=true){
+            objBombes.BombesDesamorcees[i] = true;
+            majScore();
+            objSons.Bomb.play();
+          }
+        } else if (!objJumpman.PositionPositive &&  // Vérification à la gauche
+            PositionX <= objBombes.Coordonnees[i][0] + 1/64 * demiLargeurJeu &&
+            PositionX >= objBombes.Coordonnees[i][0] - 1/64 * demiLargeurJeu &&
+            objBombes.Coordonnees[i][1] - 2/64 * hauteurJeu >= PositionY - objJumpman.hauteurJeu  &&
+            objBombes.Coordonnees[i][1] <= PositionY) {
+          if(objBombes.BombesDesamorcees[i+1]!=true){
+            objBombes.BombesDesamorcees[i + 1] = true;
+            majScore();
+            objSons.Bomb.play();
+          }
+        }
+      }
+
+      // Zone Échelle
+      for (var i = 0; i < objEchelles.CoordonneesCoins.length; i++) {
+        var coord = objEchelles.CoordonneesCoins[i];
+        if (PositionX >= coord[0] && PositionX <= coord[2] &&
+           (PositionY >= coord[1] && PositionY <= coord[5]) ) {
+          objJumpman.ZoneEchelle = i;
+        }
+      }
+
+      // Echelle
+      if (objJumpman.Echelle == true) {
+        objJumpman.PositionX = objEchelles.CoordonneesBase[objJumpman.ZoneEchelle][0];
+        if (!objJumpman.PositionPositive) {
+          objJumpman.PositionX = -1 * objJumpman.PositionX;
+        }
+        objJumpman.Walking++;
+        if(objJumpman.Walking<10)
+          objJumpman.Etat = 'LADDER';
+        else {
+          objJumpman.Etat = 'LLADDER';
+          if(objJumpman.Walking>20)
+            objJumpman.Walking = 0;
+        }
+        objSons.marcher.play();
+      }
+
+      // Gravité
+      if (!objJumpman.Collision && !objJumpman.Saut && !objJumpman.Echelle) {
+        objJumpman.PositionY += 1/128 * hauteurJeu;
+      }
+
+      // Déplacement à la droite
+      if (objJumpman.DeplacementDroite) {
+        objJumpman.PositionX += (5*objEtat.intVitesse);
+        objJumpman.Walking++;
+        objJumpman.NbPas++;
+        if(objJumpman.Walking<10)
+          objJumpman.Etat = 'RRUN';
+        else {
+          objJumpman.Etat = 'RRRUN';
+          if(objJumpman.Walking>20)
+            objJumpman.Walking = 0;
+        }
+        objSons.marcher.play();
+      }
+
+      // Déplacement à la gauche
+      if (objJumpman.DeplacementGauche) {
+        objJumpman.PositionX -= (5*objEtat.intVitesse);
+        objJumpman.Walking++;
+        objJumpman.NbPas--;
+        if(objJumpman.Walking<10)
+          objJumpman.Etat = 'LRUN';
+        else{
+          objJumpman.Etat = 'LLRUN';
+          if(objJumpman.Walking>20)
+          objJumpman.Walking = 0;
+        }
+        objSons.marcher.play();
+      }
+
+      // Déplacement en haut
+      if (objJumpman.DeplacementHaut && objJumpman.Echelle) {
+        if (objJumpman.PositionY - 5 * objEtat.intVitesse > objEchelles.CoordonneesCoins[objJumpman.ZoneEchelle][1]) {
+          objJumpman.PositionY -= 5 * objEtat.intVitesse;
+        } else {
+          objJumpman.PositionY = objEchelles.CoordonneesCoins[objJumpman.ZoneEchelle][1];
+        }
+      }
+
+      // Déplacement en bas
+      if (objJumpman.DeplacementBas && objJumpman.Echelle) {
+        if (objJumpman.PositionY + 5 * objEtat.intVitesse < objEchelles.CoordonneesBase[objJumpman.ZoneEchelle][1]) {
+          objJumpman.PositionY += 5 * objEtat.intVitesse;
+        } else {
+          objJumpman.PositionY = objEchelles.CoordonneesBase[objJumpman.ZoneEchelle][1];
+        }
+      }
+
+      // Déplacement du Saut ou de la descente
+      if (objJumpman.Saut || objJumpman.Descente) {
+        objJumpman.DeplacementDroite = false;
+        objJumpman.DeplacementGauche = false;
+
+        if (objJumpman.Saut) {
+          if(objSons.jump.currentTime!=0){
+            objSons.jump.pause;
+            objSons.jump.currentTime =0;
+          }
+          objSons.jump.play();
+          objJumpman.Etat = 'JUMPUP';
+          objJumpman.PositionY -= 1/120 * hauteurJeu;
+          objJumpman.SautPixelsFranchisY += 1/120 * hauteurJeu;
+
+          if (objJumpman.SautPixelsFranchisY >= 1/10 * hauteurJeu) {
+            objJumpman.Saut = false;
+            objJumpman.SautPixelsFranchisY = 0;
+            objJumpman.Descente = true;
+          }
+        }
+
+        if (objJumpman.Descente) {
+        }
+
+        if (objJumpman.SautPixelsFranchisX < Math.abs(objJumpman.NbPas) * 5 * objEtat.intVitesse * 2) {
+          objJumpman.PositionX += 1/24 * objJumpman.NbPas * 5 * objEtat.intVitesse * 2;
+          if(1/24 * objJumpman.NbPas * 5 * objEtat.intVitesse * 2>0)
+            objJumpman.Etat = 'RJUMP'
+          if(1/24 * objJumpman.NbPas * 5 * objEtat.intVitesse * 2<0)
+            objJumpman.Etat = 'LJUMP'
+
+          objJumpman.SautPixelsFranchisX += 1/24 * Math.abs(objJumpman.NbPas) * 5 * objEtat.intVitesse * 2;
+        } else {
+          objJumpman.Descente = false;
+          objJumpman.SautPixelsFranchisX = 0;
+        }
+      }
+
+      // Encore Zone Échelle
+      var booEncoreEchelle = false;
+      for (var i = 0; i < objEchelles.CoordonneesCoins.length; i++) {
+        var coord = objEchelles.CoordonneesCoins[i];
+        if (PositionX >= coord[0] && PositionX <= coord[2] &&
+           (PositionY >= coord[1] && PositionY <= coord[5]) ) {
+          booEncoreEchelle = true;
+        }
+      }
+
+      if (!booEncoreEchelle) {
+        objJumpman.ZoneEchelle = -1;
+        objJumpman.Echelle = false;
+      }
+
+      // Réinitialise le nombre de pas
+      if (objJumpman.Etat == 'STATIC') {
+        objJumpman.NbPas = 0;
+      } else if (objJumpman.NbPas > 20) {
+        objJumpman.NbPas = 20;
+      } else if (objJumpman.NbPas < -20) {
+        objJumpman.NbPas = -20;
+      }
+      if(objJumpman.PositionX > largeurJeu/2 || objJumpman.PositionY > hauteurJeu){
+        majVies();
+        initJumpman();
+      }
+    }
+    }
+
+    function dessinerJumpman() {
+      objC2D.save();
+
+      // Translation du contexte pour dessiner Jumpman à partir de ses pieds
+      //objC2D.translate(-1 * objJumpman.largeurJeu / 2 + objJumpman.Position[0], objJumpman.Position[0])
+            if(objJumpman.Etat == 'STATIC'){
+        //code pour dessiner jumpman static
+          objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 6, 4*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 6, 4*(objJumpman.hauteurJeu/10));
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY -objJumpman.hauteurJeu/8, 2*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY -objJumpman.hauteurJeu/8, -2*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+          
+           objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+           objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/6, objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/6, objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 12, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 12, objJumpman.hauteurJeu/10);
+        }
+      else if(objJumpman.Etat == 'JUMPUP'){
+          objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/4, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/4);
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/4, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/4);
+
+          objC2D.fillRect(objJumpman.PositionX + 2.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 2.5*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 5, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 2.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 2.5*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 5, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX + 3*(objJumpman.largeurJeu/6) , objJumpman.PositionY -objJumpman.hauteurJeu/6.5, 2*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 3*(objJumpman.largeurJeu/6)  , objJumpman.PositionY -objJumpman.hauteurJeu/6.5, -2*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+           objC2D.fillRect(objJumpman.PositionX + 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX + 4*(objJumpman.largeurJeu/6), objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 4*(objJumpman.largeurJeu/6), objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+
+        }
+        else if(objJumpman.Etat == 'LRUN'){
+           objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+
+          objC2D.fillStyle = 'black';
+
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, 1*(objJumpman.hauteurJeu / 10));
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/4, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/4);
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/4, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/2);
+
+        objC2D.fillRect(objJumpman.PositionX + 2.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 2.5*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 5, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX + 3.7*(objJumpman.largeurJeu/6) , objJumpman.PositionY -objJumpman.hauteurJeu/6.5, -2*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 1.5*(objJumpman.largeurJeu/6)  , objJumpman.PositionY -objJumpman.hauteurJeu/6.5, -2*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - (objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+           objC2D.fillRect(objJumpman.PositionX + 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX + 3.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 12, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+
+        }
+        else if(objJumpman.Etat == 'LLRUN'){
+          objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+
+          objC2D.fillStyle = 'black';
+
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, 1*(objJumpman.hauteurJeu / 10));
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/4, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/2);
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/4, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/4);
+
+        objC2D.fillRect(objJumpman.PositionX - 2.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 2.5*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 5, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX + 3.7*(objJumpman.largeurJeu/6) , objJumpman.PositionY -objJumpman.hauteurJeu/6.5, -2*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 1.7*(objJumpman.largeurJeu/6)  , objJumpman.PositionY -objJumpman.hauteurJeu/6.5, -2*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + (objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+           objC2D.fillRect(objJumpman.PositionX - 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 3.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 12, objJumpman.hauteurJeu/10);
+         
+           
+        }
+        else if(objJumpman.Etat == 'RRUN'){
+           objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+
+          objC2D.fillStyle = 'black';
+
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, 1*(objJumpman.hauteurJeu / 10));
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/4, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/2);
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/4, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/4);
+
+        objC2D.fillRect(objJumpman.PositionX - 2.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 2.5*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 5, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX + 3.7*(objJumpman.largeurJeu/6) , objJumpman.PositionY -objJumpman.hauteurJeu/6.5, -2*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 1.7*(objJumpman.largeurJeu/6)  , objJumpman.PositionY -objJumpman.hauteurJeu/6.5, -2*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + (objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+           objC2D.fillRect(objJumpman.PositionX - 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 3.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 12, objJumpman.hauteurJeu/10);
+        }
+        else if(objJumpman.Etat == 'RRRUN'){
+          objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+
+          objC2D.fillStyle = 'black';
+
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, 1*(objJumpman.hauteurJeu / 10));
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/4, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/4);
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/4, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/2);
+
+        objC2D.fillRect(objJumpman.PositionX + 2.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 2.5*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 5, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX + 3.7*(objJumpman.largeurJeu/6) , objJumpman.PositionY -objJumpman.hauteurJeu/6.5, -2*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 1.5*(objJumpman.largeurJeu/6)  , objJumpman.PositionY -objJumpman.hauteurJeu/6.5, -2*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - (objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+           objC2D.fillRect(objJumpman.PositionX + 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX + 3.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 12, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+        }
+        else if(objJumpman.Etat == 'LJUMP'){
+          objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX- objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX- objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+         objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 2, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 2, objJumpman.hauteurJeu/10);
+
+        objC2D.fillRect(objJumpman.PositionX + 2.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 4*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 5, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX + 3.7*(objJumpman.largeurJeu/6) , objJumpman.PositionY -3*(objJumpman.hauteurJeu/10), -(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 1.5*(objJumpman.largeurJeu/6)  , objJumpman.PositionY -4*(objJumpman.hauteurJeu/10), -1.5*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - (objJumpman.largeurJeu/6), objJumpman.PositionY - 8*(objJumpman.hauteurJeu/10), -2*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), -0.5*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX + 2.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 12, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 12, objJumpman.hauteurJeu/10);
+        }
+        else if(objJumpman.Etat == 'RJUMP'){
+          objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX+ objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX+ objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+         objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 2, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 2, objJumpman.hauteurJeu/10);
+
+        objC2D.fillRect(objJumpman.PositionX - 2.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 4*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 5, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX - 3.7*(objJumpman.largeurJeu/6) , objJumpman.PositionY -3*(objJumpman.hauteurJeu/10), +(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 1.5*(objJumpman.largeurJeu/6)  , objJumpman.PositionY -4*(objJumpman.hauteurJeu/10), +1.5*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + (objJumpman.largeurJeu/6), objJumpman.PositionY - 8*(objJumpman.hauteurJeu/10), +2*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), +0.5*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX - 2.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 12, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 12, objJumpman.hauteurJeu/10);
+        }
+        else if(objJumpman.Etat == 'LADDER'){
+         objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+
+          objC2D.fillStyle = 'black';
+
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, 1*(objJumpman.hauteurJeu / 10));
+
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/4, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX - 1*(objJumpman.largeurJeu/6), objJumpman.PositionY - 4*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 5, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6) , objJumpman.PositionY -4*(objJumpman.hauteurJeu/10), 1.5*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6)  , objJumpman.PositionY -3*(objJumpman.hauteurJeu/10), -1.5*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+           objC2D.fillRect(objJumpman.PositionX + 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX + 4*(objJumpman.largeurJeu/6), objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 4*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+        }
+        else if(objJumpman.Etat == 'LLADDER'){
+         objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+
+          objC2D.fillStyle = 'black';
+
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, 1*(objJumpman.hauteurJeu / 10));
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/4, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX +(objJumpman.largeurJeu/6), objJumpman.PositionY - 4*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 5, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6) , objJumpman.PositionY -4*(objJumpman.hauteurJeu/10), -1.5*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6)  , objJumpman.PositionY -3*(objJumpman.hauteurJeu/10), 1.5*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+           objC2D.fillRect(objJumpman.PositionX - 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), +objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX - 4*(objJumpman.largeurJeu/6), objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 4*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+        }
+        else if(objJumpman.Etat == 'STATICLADDER'){
+         objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/4, objJumpman.PositionY - 4*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX +(objJumpman.largeurJeu/4), objJumpman.PositionY - 4*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX - 2.5*(objJumpman.largeurJeu/6) , objJumpman.PositionY -3*(objJumpman.hauteurJeu/10), -1.5*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 2.5*(objJumpman.largeurJeu/6)  , objJumpman.PositionY -3*(objJumpman.hauteurJeu/10), 1.5*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+           objC2D.fillRect(objJumpman.PositionX - 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), -0.5*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), 0.5*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX - 3.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 3.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 6*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+        }
+        else if(objJumpman.Etat == 'ROPE'){
+         objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+
+          objC2D.fillStyle = 'black';
+
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, 9*(objJumpman.hauteurJeu / 10));
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - 4*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + (objJumpman.largeurJeu/6), objJumpman.PositionY - 4*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+         objC2D.fillRect(objJumpman.PositionX - 0.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 3*(objJumpman.hauteurJeu/10), -0.5*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + 0.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 3*(objJumpman.hauteurJeu/10), 0.5*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX - 0.5*(objJumpman.largeurJeu/6) , objJumpman.PositionY -3*(objJumpman.hauteurJeu/10), -0.5*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 0.5*(objJumpman.largeurJeu/6)  , objJumpman.PositionY -3*(objJumpman.hauteurJeu/10), 0.5*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), -0.5*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), 0.5*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+        }
+        else if(objJumpman.Etat == 'RROPE'){
+         objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+
+          objC2D.fillStyle = 'black';
+
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, 9*(objJumpman.hauteurJeu / 10));
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 4, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - 4*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + (objJumpman.largeurJeu/6), objJumpman.PositionY - 4*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+         objC2D.fillRect(objJumpman.PositionX - 0.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 3*(objJumpman.hauteurJeu/10), -0.5*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + 0.5*(objJumpman.largeurJeu/6), objJumpman.PositionY - 3*(objJumpman.hauteurJeu/10), 0.5*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX - 0.5*(objJumpman.largeurJeu/6) , objJumpman.PositionY -3*(objJumpman.hauteurJeu/10), -0.5*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 0.5*(objJumpman.largeurJeu/6)  , objJumpman.PositionY -3*(objJumpman.hauteurJeu/10), 0.5*(objJumpman.largeurJeu/6) , objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu+objJumpman.hauteurJeu/5, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), -0.5*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), 0.5*(objJumpman.largeurJeu / 6), objJumpman.hauteurJeu/10);
+
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 7*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 9*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+        }
+        else if('DEAD'){
+          objC2D.fillStyle = 'white';
+      
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu/2, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+          objC2D.fillRect(objJumpman.PositionX, objJumpman.PositionY - objJumpman.hauteurJeu/2, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/5);
+
+          objC2D.fillStyle = 'red';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu/3, objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu/3, -objJumpman.largeurJeu / 6, 3*(objJumpman.hauteurJeu/10));
+
+           objC2D.fillStyle = 'violet';
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu/10 , objJumpman.largeurJeu / 2, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX , objJumpman.PositionY - objJumpman.hauteurJeu/10, -objJumpman.largeurJeu / 2, objJumpman.hauteurJeu/10);
+
+
+          objC2D.fillStyle = 'white';
+          objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu / 2.5, objJumpman.PositionY - objJumpman.hauteurJeu/10 , (objJumpman.largeurJeu/10) , -2*objJumpman.hauteurJeu/12);
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu / 2  , objJumpman.PositionY - objJumpman.hauteurJeu/10 , (objJumpman.largeurJeu/10) , -2*objJumpman.hauteurJeu/12);
+
+          objC2D.fillStyle = 'red';
+           objC2D.fillRect(objJumpman.PositionX + objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu/3, objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - objJumpman.largeurJeu/6, objJumpman.PositionY - objJumpman.hauteurJeu/3, -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillRect(objJumpman.PositionX + 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 4*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 2*(objJumpman.largeurJeu/6), objJumpman.PositionY - 4*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+           objC2D.fillRect(objJumpman.PositionX + 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 5*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 3*(objJumpman.largeurJeu/6), objJumpman.PositionY - 5*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 6, objJumpman.hauteurJeu/10);
+
+          objC2D.fillStyle = 'white';
+           objC2D.fillRect(objJumpman.PositionX + 4*(objJumpman.largeurJeu/6), objJumpman.PositionY -5*(objJumpman.hauteurJeu/10), objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+          objC2D.fillRect(objJumpman.PositionX - 4*(objJumpman.largeurJeu/6), objJumpman.PositionY - 5*(objJumpman.hauteurJeu/10), -objJumpman.largeurJeu / 14, objJumpman.hauteurJeu/10);
+
+        }
+
+      
+      objC2D.restore();
+
+
+      objC2D.restore();
+    }
+
+    // Plateformes
+    function initPlateformes() {
+      objPlateformes = new Object();
+
+      // Pair (Gauche) = X, Impair (Droite) = Y
+        // Les coordonnées sont en ratio pour s'ajuster automatiquement
+        // à un changement de taille du canvas
+      objPlateformes.Coordonnees = [[ 06/64 * demiLargeurJeu, 04/64 * hauteurJeu,
+                                      16/64 * demiLargeurJeu, 06/64 * hauteurJeu,
+                                      36/64 * demiLargeurJeu, 06/64 * hauteurJeu,
+                                      41/64 * demiLargeurJeu, 08/64 * hauteurJeu,
+                                      46/64 * demiLargeurJeu, 06/64 * hauteurJeu,
+                                      62/64 * demiLargeurJeu, 06/64 * hauteurJeu ],
+
+                                    [ 00/64 * demiLargeurJeu, 18/64 * hauteurJeu,
+                                      08/64 * demiLargeurJeu, 18/64 * hauteurJeu,
+                                      20/64 * demiLargeurJeu, 16/64 * hauteurJeu,
+                                      34/64 * demiLargeurJeu, 16/64 * hauteurJeu ],
+
+                                    [ 46/64 * demiLargeurJeu, 18/64 * hauteurJeu,
+                                      62/64 * demiLargeurJeu, 18/64 * hauteurJeu ],
+
+                                    [ 00/64 * demiLargeurJeu, 32/64 * hauteurJeu,
+                                      20/64 * demiLargeurJeu, 32/64 * hauteurJeu ],
+
+                                    [ 32/64 * demiLargeurJeu, 32/64 * hauteurJeu,
+                                      36/64 * demiLargeurJeu, 32/64 * hauteurJeu ],
+
+                                    [ 46/64 * demiLargeurJeu, 32/64 * hauteurJeu,
+                                      62/64 * demiLargeurJeu, 32/64 * hauteurJeu ],
+
+                                    [ 00/64 * demiLargeurJeu, 44/64 * hauteurJeu,
+                                      20/64 * demiLargeurJeu, 44/64 * hauteurJeu,
+                                      44/64 * demiLargeurJeu, 50/64 * hauteurJeu,
+                                      62/64 * demiLargeurJeu, 50/64 * hauteurJeu ],
+
+                                    [ 00/64 * demiLargeurJeu, 60/64 * hauteurJeu,
+                                      06/64 * demiLargeurJeu, 60/64 * hauteurJeu ],
+
+                                    [ 00/64 * demiLargeurJeu, 62/64 * hauteurJeu,
+                                      62/64 * demiLargeurJeu, 62/64 * hauteurJeu ]];
+    }
+
+    function dessinerPlateformes() {
+      objC2D.save();
+
+      objC2D.fillStyle = '#648C62';
+      //objC2D.lineWidth = '5';
+
+      // Dessine une ligne d'une coordonnée à une autre qui couvre la moitié,
+      // puis redessine la même chose en miroir pour l'autre moitié
+      for (var i = 0; i < objPlateformes.Coordonnees.length; i++) {
+        var coord = objPlateformes.Coordonnees[i];
+
+        for (var j = 0; j < coord.length - 2; j += 2) {
+          for (var k = 0; k < coord[j + 2] - coord[j]; k += 1/64 * demiLargeurJeu) {
+            var hauteurPente = Math.floor( (coord[j + 3] - coord[j + 1]) * ( k / (coord[j + 2] - coord[j]) ) );
+
+            objC2D.scale(-1, 1);
+
+            if (i != 0 || (j != 4 && j != 6) || !objBombes.BombesDesamorcees[3]) {
+              objC2D.fillStyle = '#648C62';
+              objC2D.fillRect(coord[j] + k, coord[j + 1] + hauteurPente, 1/64 * demiLargeurJeu, 1/64 * hauteurJeu);
+              objC2D.fillStyle = 'black';
+              objC2D.fillRect(coord[j] + k, coord[j + 1] + hauteurPente + 1/64 * hauteurJeu * 1/6, 1/64 * demiLargeurJeu * 2/3, 1/64 * hauteurJeu * 2/3);
+            }
+
+            // Miroir
+            objC2D.scale(-1, 1);
+
+            if (i != 0 || (j != 4 && j != 6) || !objBombes.BombesDesamorcees[2]) {
+              objC2D.fillStyle = '#648C62';
+              objC2D.fillRect(coord[j] + k, coord[j + 1] + hauteurPente, 1/64 * demiLargeurJeu, 1/64 * hauteurJeu);
+              objC2D.fillStyle = 'black';
+              objC2D.fillRect(coord[j] + k, coord[j + 1] + hauteurPente + 1/64 * hauteurJeu * 1/6, 1/64 * demiLargeurJeu * 2/3, 1/64 * hauteurJeu * 2/3);
+            }
+          }
+        }
+      }
+
+      objC2D.restore();
+    }
+
+    // initiation de l'etat du jeu
+    function initEtat() {
+      timeSpent = 0;
+      objEtat = new Object();
+      objEtat.on = true;
+      objEtat.intVitesse = 1;
+      objEtat.intVies = 3;
+      objEtat.intBonus = 1500;
+      objEtat.intScore = 0;
+    }
+
+     function majVies(){
+      if(objEtat.intVies>0)
+      objEtat.intVies--;
+    if(objEtat.intVies==0){
+      objEtat.on = false;
+    objSons.lose.play();
+    arreterAnimation();
+    setTimeout(function(){restInPeace();},500);
+   setTimeout(function(){objSons.lose.pause(); initJeu(); }, 10000);
+
+  }
+}
+
+  function restInPeace(){
+    objC2D.fillStyle = 'black';
+      objC2D.fillRect(0, 0, 1000,1500);
+     objC2D.fillRect(0, 0, -1000,1500);
+     var strTexte = 'REST IN PEACE';
+    objC2D.font = '80px Arial';
+    objC2D.fillStyle = 'white';
+    objC2D.textAlign = "center";
+    objC2D.textBaseline = "middle";
+    objC2D.fillText(strTexte, 0, objCanvas.height/2);
+  }
+
+    function majBonus() {
+      if(objEtat.intBonus>0){
+      timeSpent ++;
+      if(timeSpent>=300){
+      objEtat.intBonus-=100;
+      timeSpent=0;
+    }
+  }
+    }
+
+    function majScore() {
+   var boo = true;
+   for(var i = 0;i<objBombes.BombesDesamorcees.length;i++)
+    if(!objBombes.BombesDesamorcees[i])
+      boo=false;
+    if(boo){
+    objEtat.on = false;
+    scoreTemp = objEtat.intScore+objEtat.intBonus;
+    viesTemp = objEtat.intVies;
+    speedTemp = objEtat.intVitesse;
+    nextRound();
+  }
+  else
+    objEtat.intScore+=100;
+  }
+
+
+    function majVitesse(){
+      objEtat.intVitesse++;
+    }
+
+    function dessinerPointage() {
+    objC2D.save();
+      // le prochain bloc de code dessine le background sur lequel les infos sont ecrites!
+      objC2D.beginPath();
+      objC2D.fillStyle = 'grey';
+      objC2D.fillRect(-demiLargeurCanvas, hauteurCanvas-(quartHauteurCanvas/6),  largeurCanvas, quartHauteurCanvas/6);
+      objC2D.fillStyle = 'red';
+      objC2D.fillRect(-demiLargeurCanvas, hauteurCanvas-(quartHauteurCanvas/3),  largeurCanvas, quartHauteurCanvas/6);
+      objC2D.fillStyle = 'purple';
+      objC2D.fillRect(-quartLargeurCanvas/2, hauteurCanvas-(quartHauteurCanvas/3),  quartLargeurCanvas, quartHauteurCanvas/3);
+      objC2D.closePath();
+
+      //ecriture des infos
+        objC2D.beginPath();
+        var strTexte = 'JUMPMEN  =  ' + objEtat.intVies;
+        objC2D.font = '30px Comic Sans MS';
+        objC2D.fillStyle = 'black';
+        objC2D.textAlign = 'left';
+        objC2D.textBaseline = 'middle';
+        objC2D.fillText(strTexte, -demiLargeurCanvas, hauteurCanvas-(quartHauteurCanvas/4));
+        objC2D.closePath();
+
+        objC2D.beginPath();
+        var strTexte = 'SCORE            ' + objEtat.intScore;
+        objC2D.font = '30px Comic Sans MS';
+        objC2D.fillStyle = 'black';
+        objC2D.textAlign = 'left';
+        objC2D.textBaseline = 'middle';
+        objC2D.fillText(strTexte, -demiLargeurCanvas, hauteurCanvas-(quartHauteurCanvas/12));
+        objC2D.closePath();
+
+        objC2D.beginPath();
+        var strTexte = 'LEVEL 01' ;
+        objC2D.font = '30px Comic Sans MS';
+        objC2D.fillStyle = 'black';
+        objC2D.textAlign = 'center';
+        objC2D.textBaseline = 'middle';
+        objC2D.fillText(strTexte, 0, hauteurCanvas-(quartHauteurCanvas/4));
+        objC2D.closePath();
+
+        objC2D.beginPath();
+        var strTexte = 'PLAYER  1' ;
+        objC2D.font = '30px Comic Sans MS';
+        objC2D.fillStyle = 'black';
+        objC2D.textAlign = 'center';
+        objC2D.textBaseline = 'middle';
+        objC2D.fillText(strTexte, 0, hauteurCanvas-(quartHauteurCanvas/12));
+        objC2D.closePath();
+
+        objC2D.beginPath();
+        var strTexte = 'RUN SPEED        ' + objEtat.intVitesse;
+        objC2D.font = '30px Comic Sans MS';
+        objC2D.fillStyle = 'black';
+        objC2D.textAlign = 'right';
+        objC2D.textBaseline = 'middle';
+        objC2D.fillText(strTexte, demiLargeurCanvas, hauteurCanvas-(quartHauteurCanvas/4));
+        objC2D.closePath();
+
+        objC2D.beginPath();
+        var strTexte = 'BONUS         ' + objEtat.intBonus;
+        objC2D.font = '30px Comic Sans MS';
+        objC2D.fillStyle = 'black';
+        objC2D.textAlign = 'right';
+        objC2D.textBaseline = 'middle';
+        objC2D.fillText(strTexte, demiLargeurCanvas, hauteurCanvas-(quartHauteurCanvas/12));
+        objC2D.closePath();
+
+
+      objC2D.restore();
+    }
+
+    /*** FIN Composantes du jeu FIN ***/
+
+    /*** Contrôles Clavier et Souris ***/
+
+    function deplacerJumpman() {
+      if (objJumpman.ZoneEchelle != -1) {
+        switch (event.keyCode) {
+          case 38: // Flèche-en-haut
+            objJumpman.Echelle = true;
+            objJumpman.DeplacementDroite = false;
+            objJumpman.DeplacementGauche = false;
+            break;
+          case 40: // Flèche-en-bas
+            objJumpman.Echelle = true;
+            objJumpman.DeplacementDroite = false;
+            objJumpman.DeplacementGauche = false;
+            break;
+        }
+      }
+
+      //console.log(objJumpman.ZoneEchelle);
+      if (objJumpman.Echelle) {
+        switch (event.keyCode) {
+          case 32: // Spacebar
+            objJumpman.Echelle = false;
+            break;
+          case 38: // Flèche-en-haut
+            objJumpman.DeplacementHaut = true;
+            break;
+          case 40: // Flèche-en-bas
+            objJumpman.DeplacementBas = true;
+            break;
+        }
+      } else if (objJumpman.Collision) {
+        switch (event.keyCode) {
+          case 32: // Spacebar
+            objJumpman.Saut = true;
+            break;
+          case 39: // Flèche-à-droite
+            objJumpman.DeplacementDroite = true;
+            break;
+          case 37: // Flèche-à-gauche
+            objJumpman.DeplacementGauche = true;
+            break;
+        }
+      }
+    }
+
+    function arreterJumpman() {
+      if (objJumpman.Collision) {
+        switch (event.keyCode) {
+          case 39: // Flèche-à-droite
+            objJumpman.DeplacementDroite = false;
+            break;
+          case 37: // Flèche-à-gauche
+            objJumpman.DeplacementGauche = false;
+            break; 
+        }
+      } else {
+        switch (event.keyCode) {
+          case 38: // Flèche-en-haut
+              objJumpman.DeplacementHaut = false;
+              break;
+          case 40: // Flèche-en-bas
+            objJumpman.DeplacementBas = false;
+            break;
+        }
+      }
+    }
+
+    document.onclick = function gererSouris() {
+
+    }
+
+    /*** FIN Contrôles Clavier et Souris FIN ***/
+
+  </script>
+</head>
+
+<body onload="initJeu()" background="galaxy.jpg">
+  <header class="sTexteCentre sLargeurDiv sEntete">
+        <p> 
+            <span class="sTitreApp">
+                Jumpman<br />
+            </span>  
+            <span>par<br /></span>
+            <span class="sAuteurApp">
+               Jasmin Lapointe & Michel Bussiere
+            </span> 
+       </p>
+    </header>
+	<canvas id="monCanvas" width="1280" height="800" tabIndex="1"
+    onkeydown="deplacerJumpman(); return false" onkeyup="arreterJumpman(); return false" class="sCanvas">
+		Votre navigateur ne supporte pas la balise canvas
+  </canvas>
+</body>
+</html>
